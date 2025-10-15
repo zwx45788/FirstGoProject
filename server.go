@@ -54,12 +54,14 @@ func (s *Server) Handler(conn net.Conn) {
 	fmt.Println("连接建立成功")
 
 	//用户上线
-	s.mapLock.Lock()
-	user := NewUser(conn)
-	s.OnlineMap[user.Name] = user
-	s.mapLock.Unlock()
+	// s.mapLock.Lock()
+
+	// s.OnlineMap[user.Name] = user
+	// s.mapLock.Unlock()
+	user := NewUser(conn, s)
+	user.Online()
 	//广播当前用户上线的消息
-	s.Broadcast(user, "已上线")
+	//s.Broadcast(user, "is online")
 	//接受客户端发送的消息
 	go func() {
 		buf := make([]byte, 4096)
@@ -67,7 +69,7 @@ func (s *Server) Handler(conn net.Conn) {
 			n, err := conn.Read(buf)
 
 			if n == 0 {
-				s.Broadcast(user, "下线")
+				user.Offline()
 				return
 			}
 
@@ -75,9 +77,9 @@ func (s *Server) Handler(conn net.Conn) {
 				fmt.Println("conn.Read err:", err)
 				return
 			}
-			msg := string(buf[:n-1])
+			msg := string(buf[:n-2])
 
-			s.Broadcast(user, msg)
+			user.DoMessage(msg)
 		}
 	}()
 
