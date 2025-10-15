@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -42,32 +43,28 @@ func (s *Server) ListenMessager() {
 		s.mapLock.Unlock()
 	}
 }
+
+// 广播消息
 func (s *Server) Broadcast(user *User, msg string) {
 	// 将用户的消息发送到全体用户
 	sendMsg := "[" + user.Addr + "]" + user.Name + ":" + msg
 	s.Message <- sendMsg
 }
 
+// 事件处理
 func (s *Server) Handler(conn net.Conn) {
-
-	//当前连接的业务
-	fmt.Println("连接建立成功")
-
 	//用户上线
-	s.mapLock.Lock()
-	user := NewUser(conn)
-	s.OnlineMap[user.Name] = user
-	s.mapLock.Unlock()
-	//广播当前用户上线的消息
-	s.Broadcast(user, "已上线")
-	//接受客户端发送的消息
+	user := NewUser(conn, s)
+	user.Online()
+	//监听用户是否活跃
+	isLive := make(chan bool)
 	go func() {
 		buf := make([]byte, 4096)
 		for {
 			n, err := conn.Read(buf)
 
 			if n == 0 {
-				s.Broadcast(user, "下线")
+				user.Offline()
 				return
 			}
 
@@ -75,16 +72,30 @@ func (s *Server) Handler(conn net.Conn) {
 				fmt.Println("conn.Read err:", err)
 				return
 			}
-			msg := string(buf[:n-1])
+			msg := string(buf[:n-2]) //需要修改
 
-			s.Broadcast(user, msg)
+			user.DoMessage(msg)
+
+			isLive <- true
 		}
 	}()
 
-	select {}
-}
+	select {
+	case <-isLive:
+		// 用户活跃
+		//重置定时器
+	case <-time.After(time.Second * 60):
+		// 用户不活跃
+		user.SendMsg("time out")
 
-// 广播消息
+		close(user.C)
+
+		conn.Close() //关闭连接
+
+		return //runtime.Goexit()
+		//user.Offline()
+	}
+}
 
 func (s *Server) Start() {
 	// socket listen
