@@ -55,6 +55,7 @@ func (s *Server) Broadcast(user *User, msg string) {
 func (s *Server) Handler(conn net.Conn) {
 	//用户上线
 	user := NewUser(conn, s)
+
 	user.Online()
 	//监听用户是否活跃
 	isLive := make(chan bool)
