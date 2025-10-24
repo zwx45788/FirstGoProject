@@ -81,20 +81,22 @@ func (s *Server) Handler(conn net.Conn) {
 		}
 	}()
 
-	select {
-	case <-isLive:
-		// 用户活跃
-		//重置定时器
-	case <-time.After(time.Second * 60):
-		// 用户不活跃
-		user.SendMsg("time out")
+	for {
+		select {
+		case <-isLive:
+			// 用户活跃
+			//重置定时器
+		case <-time.After(time.Second * 600):
+			// 用户不活跃
+			user.SendMsg("time out")
 
-		close(user.C)
+			close(user.C)
 
-		conn.Close() //关闭连接
+			conn.Close() //关闭连接
 
-		return //runtime.Goexit()
-		//user.Offline()
+			return //runtime.Goexit()
+			//user.Offline()
+		}
 	}
 }
 
