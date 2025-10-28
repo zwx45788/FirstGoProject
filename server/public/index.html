@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go聊天室</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header">
+    <div class="user-info">
+      <span>当前用户:</span>
+      <span class="username" id="currentUsername">未设置</span>
+    </div>
+    <div>
+      <span id="connectionStatus">未连接</span>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <div class="sidebar">
+      <div class="menu-item active" data-mode="public">公共聊天</div>
+      <div class="menu-item" data-mode="private">私聊</div>
+      <div class="menu-item" data-mode="rename">修改用户名</div>
+
+      <div class="users-list" id="usersList" style="display:none;">
+        <h4>在线用户</h4>
+        <div id="usersContainer"></div>
+      </div>
+    </div>
+
+    <div class="chat-area">
+      <div class="chat-header" id="chatHeader">公共聊天室</div>
+      <div class="messages" id="messages"></div>
+      <div class="input-area">
+        <input type="text" id="messageInput" class="message-input" placeholder="输入消息...">
+        <button id="sendBtn" class="send-btn">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 欢迎模态框 -->
+  <div id="welcomeModal" class="modal">
+    <div class="modal-content">
+      <h2>欢迎来到聊天室!</h2>
+      <p>请输入你的昵称开始聊天</p>
+      <input type="text" id="welcomeUsernameInput" placeholder="例如：小明" maxlength="20">
+      <div class="modal-buttons">
+        <button onclick="setWelcomeUsername()">开始聊天</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 修改用户名模态框 -->
+  <div class="modal" id="renameModal">
+    <div class="modal-content">
+      <h3>修改用户名</h3>
+      <input type="text" id="newUsername" placeholder="输入新用户名">
+      <div class="modal-buttons">
+        <button class="btn btn-secondary" onclick="closeRenameModal()">取消</button>
+        <button class="btn btn-primary" onclick="updateUsername()">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

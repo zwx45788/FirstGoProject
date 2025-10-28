@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,7 +25,7 @@ func NewServer(ip string, port int) *Server {
 		Ip:        ip,
 		Port:      port,
 		OnlineMap: make(map[string]*User),
-		Message:   make(chan string),
+		Message:   make(chan string, 100),
 	}
 	return server
 }
@@ -49,7 +50,7 @@ func (s *Server) Start() {
 		user := NewUser(conn, s)
 		user.Online()
 
-		// 监听用户消息
+		// 监听用户消息写入管道
 		go func() {
 			for {
 				_, p, err := conn.ReadMessage()
@@ -63,9 +64,13 @@ func (s *Server) Start() {
 	})
 
 	// 提供静态文件服务 (HTML页面)
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
-	})
+	// http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// 	http.ServeFile(w, r, "index.html")
+	// })
+
+	// 假设你的前端文件放在 ./public 目录（与 server 可相对或绝对路径）
+	fs := http.FileServer(http.Dir("./public"))
+	http.Handle("/", fs) // 所有静态资源（index.html、style.css、script.js）都会被正确返回
 
 	// 启动消息广播的goroutine
 	go s.ListenMessager()
@@ -78,20 +83,23 @@ func (s *Server) Start() {
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.Port), nil))
 }
 
-// 监听广播消息channel，一旦有消息就发送给所有在线用户
+// 将管道中的消息分发给所有用户
 func (s *Server) ListenMessager() {
-	for {
-		msg := <-s.Message
-		s.mapLock.Lock()
+	for msg := range s.Message {
+		s.mapLock.RLock()
 		for _, user := range s.OnlineMap {
-			user.C <- msg
+			select {
+			case user.C <- msg:
+			default:
+				log.Printf("! client %s buffer full, message discarded\n", user.Name)
+			}
 		}
-		s.mapLock.Unlock()
+		s.mapLock.RUnlock()
 	}
 }
 
-// 广播消息的方法
-func (s *Server) Broadcast(user *User, msg string) {
-	sendMsg := "[" + user.Name + "]:" + msg
-	s.Message <- sendMsg
+// 将用户发送的信息写入管道
+func (s *Server) Broadcast(msg Message) {
+	data, _ := json.Marshal(msg)
+	s.Message <- string(data)
 }
